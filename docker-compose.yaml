@@ -1,0 +1,12 @@
+version: "3.8"
+
+services:
+  mariadb:
+    image: mariadb
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: secret
+    # volumes:
+    #   - ./data:/var/lib/mysql
+    ports:
+      - 10023:3306
