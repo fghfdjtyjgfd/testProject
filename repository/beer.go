@@ -1,24 +1,17 @@
-package main
+package repository
 
 import (
 	"fmt"
 	"log"
+	m "mariadb/model"
 
 	"github.com/bxcodec/faker/v3"
 	"gorm.io/gorm"
 )
 
-type Beer struct {
-	ID       int
-	Name     string
-	Type     string
-	Detail   string
-	ImageURL string
-}
-
-func CreateBeer(db *gorm.DB, beer *Beer) error {
+func CreateBeer(db *gorm.DB, beer *m.Beer) error {
 	for i := 0; i < 50; i++ {
-		db.Create(&Beer{
+		db.Create(&m.Beer{
 			Name:     faker.Word(),
 			Type:     faker.Word(),
 			Detail:   faker.Paragraph(),
@@ -28,8 +21,8 @@ func CreateBeer(db *gorm.DB, beer *Beer) error {
 	return nil
 }
 
-func GetBeers(db *gorm.DB) []Beer {
-	var beers []Beer
+func GetBeers(db *gorm.DB) []m.Beer {
+	var beers []m.Beer
 	result := db.Find(&beers)
 	if result.Error != nil {
 		log.Fatalf("Error to get beer: %v", result.Error)
@@ -37,8 +30,8 @@ func GetBeers(db *gorm.DB) []Beer {
 	return beers
 }
 
-func GetBeer(db *gorm.DB, id int) *Beer {
-	var beer Beer
+func GetBeer(db *gorm.DB, id int) *m.Beer {
+	var beer m.Beer
 	result := db.First(&beer, id)
 	if result.Error != nil {
 		log.Fatalf("Error to get beer: %v", result.Error)
@@ -46,7 +39,7 @@ func GetBeer(db *gorm.DB, id int) *Beer {
 	return &beer
 }
 
-func UpdateBeer(db *gorm.DB, beer *Beer) error {
+func UpdateBeer(db *gorm.DB, beer *m.Beer) error {
 	result := db.Save(&beer)
 	if result.Error != nil {
 		return result.Error
@@ -55,7 +48,7 @@ func UpdateBeer(db *gorm.DB, beer *Beer) error {
 }
 
 func DeleteBeer(db *gorm.DB, id int) error {
-	var beer Beer
+	var beer m.Beer
 	result := db.Delete(&beer, id)
 	if result.Error != nil {
 		return result.Error
@@ -63,8 +56,8 @@ func DeleteBeer(db *gorm.DB, id int) error {
 	return nil
 }
 
-func SearchBeer(db *gorm.DB, beerName string) *Beer {
-	var beer Beer
+func SearchBeer(db *gorm.DB, beerName string) *m.Beer {
+	var beer m.Beer
 	result := db.Where("name = ?", beerName).First(&beer)
 	if result.Error != nil {
 		log.Fatalf("Error to search beer: %v", result.Error)
