@@ -3,6 +3,7 @@ package main
 import (
 	conn "mariadb/connection"
 	m "mariadb/model"
+	"mariadb/router"
 )
 
 func main() {
@@ -12,4 +13,5 @@ func main() {
 	}
 	db.AutoMigrate(&m.Beer{})
 
+	router.NewApiRouter(db)
 }

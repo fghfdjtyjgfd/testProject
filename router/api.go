@@ -82,6 +82,6 @@ func NewApiRouter(db *gorm.DB) {
 		}
 		return c.JSON(fiber.Map{"message": "deleted beer successful"})
 	})
-
+	
 	app.Listen(":8000")
 }
