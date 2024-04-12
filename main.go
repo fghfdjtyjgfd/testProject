@@ -2,33 +2,30 @@ package main
 
 import (
 	"fmt"
+	conn "mariadb/connection"
 	"math"
 	"strconv"
 
 	"github.com/gofiber/fiber/v2"
-	"gorm.io/driver/mysql"
-	"gorm.io/gorm"
 )
 
 func main() {
-	dsn := "root:root@tcp(127.0.0.1:3306)/testdb"
-	db, err := gorm.Open(mysql.Open(dsn), &gorm.Config{})
+	db, err := conn.NewDB()
 	if err != nil {
 		panic("failed to connect database")
 	}
 	db.AutoMigrate(&Beer{})
 
 	app := fiber.New()
-
 	app.Get("/beers/all", func(c *fiber.Ctx) error {
 		return c.JSON(GetBeers(db))
 	})
 
 	app.Get("/beers", func(c *fiber.Ctx) error {
 		var beers []Beer
-		
+
 		sql := "SELECT * FROM testdb.beers"
-		
+
 		if name := c.Query("name"); name != "" {
 			sql = fmt.Sprintf("%s WHERE Name LIKE '%%%s%%' ", sql, name)
 		}
@@ -39,16 +36,15 @@ func main() {
 
 		db.Raw(sql).Count(&total)
 
-		sql = fmt.Sprintf("%s LIMIT %d OFFSET %d", sql, perPage, (page -1)*perPage)
+		sql = fmt.Sprintf("%s LIMIT %d OFFSET %d", sql, perPage, (page-1)*perPage)
 
-		
 		db.Raw(sql).Scan(&beers)
 
 		return c.JSON(fiber.Map{
-			"data": beers,
-			"total": total,
-			"page": page,
-			"lastPage": math.Ceil(float64(total/int64(perPage))),
+			"data":     beers,
+			"total":    total,
+			"page":     page,
+			"lastPage": math.Ceil(float64(total / int64(perPage))),
 		})
 	})
 
