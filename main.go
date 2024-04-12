@@ -1,6 +1,8 @@
 package main
 
 import (
+	"fmt"
+	"math"
 	"strconv"
 
 	"github.com/gofiber/fiber/v2"
@@ -18,17 +20,36 @@ func main() {
 
 	app := fiber.New()
 
-	app.Get("/beers", func(c *fiber.Ctx) error {
+	app.Get("/beers/all", func(c *fiber.Ctx) error {
 		return c.JSON(GetBeers(db))
 	})
 
-	app.Get("/beers/:id", func(c *fiber.Ctx) error {
-		id, err := strconv.Atoi(c.Params("id"))
-		if err != nil {
-			return c.SendStatus(fiber.StatusBadRequest)
+	app.Get("/beers", func(c *fiber.Ctx) error {
+		var beers []Beer
+		
+		sql := "SELECT * FROM testdb.beers"
+		
+		if name := c.Query("name"); name != "" {
+			sql = fmt.Sprintf("%s WHERE Name LIKE '%%%s%%' ", sql, name)
 		}
-		beer := GetBeer(db, id)
-		return c.JSON(beer)
+
+		page, _ := strconv.Atoi(c.Query("page", "1"))
+		perPage := 10
+		var total int64
+
+		db.Raw(sql).Count(&total)
+
+		sql = fmt.Sprintf("%s LIMIT %d OFFSET %d", sql, perPage, (page -1)*perPage)
+
+		
+		db.Raw(sql).Scan(&beers)
+
+		return c.JSON(fiber.Map{
+			"data": beers,
+			"total": total,
+			"page": page,
+			"lastPage": math.Ceil(float64(total/int64(perPage))),
+		})
 	})
 
 	app.Post("/beers", func(c *fiber.Ctx) error {

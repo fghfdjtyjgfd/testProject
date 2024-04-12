@@ -1,8 +1,10 @@
 package main
 
 import (
+	"fmt"
 	"log"
 
+	"github.com/bxcodec/faker/v3"
 	"gorm.io/gorm"
 )
 
@@ -15,9 +17,13 @@ type Beer struct {
 }
 
 func CreateBeer(db *gorm.DB, beer *Beer) error {
-	result := db.Create(beer)
-	if result.Error != nil {
-		return result.Error
+	for i := 0; i < 50; i++ {
+		db.Create(&Beer{
+			Name:     faker.Word(),
+			Type:     faker.Word(),
+			Detail:   faker.Paragraph(),
+			ImageURL: fmt.Sprintf("http://test.com/%s", faker.UUIDDigit()),
+		})
 	}
 	return nil
 }
