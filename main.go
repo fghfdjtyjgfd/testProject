@@ -8,7 +8,6 @@ import (
 
 	"github.com/gofiber/fiber/v2"
 )
-
 func main() {
 	db, err := conn.NewDB()
 	if err != nil {
@@ -17,14 +16,12 @@ func main() {
 	db.AutoMigrate(&Beer{})
 
 	app := fiber.New()
-	app.Get("/beers/all", func(c *fiber.Ctx) error {
-		return c.JSON(GetBeers(db))
-	})
+
 
 	app.Get("/beers", func(c *fiber.Ctx) error {
 		var beers []Beer
 
-		sql := "SELECT * FROM testdb.beers"
+
 
 		if name := c.Query("name"); name != "" {
 			sql = fmt.Sprintf("%s WHERE Name LIKE '%%%s%%' ", sql, name)
