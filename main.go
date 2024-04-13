@@ -2,16 +2,14 @@ package main
 
 import (
 	"fmt"
+	conn "mariadb/connection"
 	"math"
 	"strconv"
 
 	"github.com/gofiber/fiber/v2"
-	"gorm.io/driver/mysql"
-	"gorm.io/gorm"
 )
 func main() {
-	dsn := "root:root@tcp(127.0.0.1:3306)/testdb"
-	db, err := gorm.Open(mysql.Open(dsn), &gorm.Config{})
+	db, err := conn.NewDB()
 	if err != nil {
 		panic("failed to connect database")
 	}
@@ -19,10 +17,11 @@ func main() {
 
 	app := fiber.New()
 
+
 	app.Get("/beers", func(c *fiber.Ctx) error {
 		var beers []Beer
 
-		sql := "SELECT ID, Name, Type, Detail, Image_URL FROM testdb.beers"
+
 
 		if name := c.Query("name"); name != "" {
 			sql = fmt.Sprintf("%s WHERE Name LIKE '%%%s%%' ", sql, name)
