@@ -1,7 +1,7 @@
 package main
 
 import (
-	"fmt"
+	
 
 	conn "mariadb/connection"
 	m "mariadb/model"
