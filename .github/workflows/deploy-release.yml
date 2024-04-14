@@ -1,0 +1,220 @@
+name: "Deployment: release"
+
+on:
+  push:
+    branches: [ main ]
+
+env:
+  PROJECT_ID: ${{ secrets.GKE_PROJECT }}
+  GKE_CLUSTER: jarb-cluster-001    # TODO: update to cluster name
+  GKE_ZONE: asia-southeast1-a	   # TODO: update to cluster zone
+  DEPLOYMENT_NAME: ${{ github.event.repository.name }} # TODO: change to repo name
+  ACCESS_TOKEN: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
+  DB_NAME: ${{ secrets.MYSQL_DATABASE }}
+  DB_USER: ${{ secrets.MYSQL_USERNAME }}
+  DB_PASS: ${{ secrets.MYSQL_PASSWORD }}
+
+jobs:
+  docker-build:
+    name: Docker build and push to Docker Hub
+    runs-on: ubuntu-latest
+
+    steps:
+      - 
+        name: Checkout Code
+        uses: actions/checkout@v2
+      -
+        name: Create new config.yml for deployment
+        run: |-
+          if [ -e configs/config.yaml ]; then
+              rm configs/config.yaml
+          fi
+          if [ ! -e configs ]; then
+              mkdir configs
+          fi
+
+          echo 'app:' > configs/config.yaml
+          echo '  name: "backend-api"' >> configs/config.yaml
+          echo '  port: 1323' >> configs/config.yaml
+
+          echo 'log:' >> configs/config.yaml
+          echo '  env: "prod"' >> configs/config.yaml
+          echo '  level: "debug"' >> configs/config.yaml
+          echo '  reportcaller: false' >> configs/config.yaml
+
+          echo 'mysql:' >> configs/config.yaml
+          echo "  username: \"$DB_USER\"" >> configs/config.yaml
+          echo "  password: \"$DB_PASS\"" >> configs/config.yaml
+          echo "  database: \"$DB_NAME\"" >> configs/config.yaml
+          echo '  host: "127.0.0.1"' >> configs/config.yaml
+          echo '  port: "3306"' >> configs/config.yaml
+          echo '  maxidle: 50' >> configs/config.yaml
+          echo '  maxopen: 50' >> configs/config.yaml
+          echo '  maxlifetime: 30m' >> configs/config.yaml
+          echo '  timeout: 5s' >> configs/config.yaml
+          echo '  readtimeout: 5s' >> configs/config.yaml
+          echo '  writetimeout: 5s' >> configs/config.yaml
+          echo '  parsetime: true' >> configs/config.yaml
+          echo '  debug: true' >> configs/config.yaml
+          echo '  migrate: false' >> configs/config.yaml
+
+      -
+        name: Create Dockerfile
+        run: |-
+          if [ -e Dockerfile ]; then
+              rm Dockerfile
+          fi
+          echo 'FROM golang:1.13 as builder' > Dockerfile
+          echo 'WORKDIR /app' >> Dockerfile
+          echo 'COPY . .' >> Dockerfile
+          echo "RUN git config --global url.\"https://$ACCESS_TOKEN:x-oauth-basic@github.com/jarbza\".insteadOf \"https://github.com/jarbza\"" >> Dockerfile
+          echo 'RUN CGO_ENABLED=0 go build \' >> Dockerfile
+          echo '    -ldflags "-X main.githash=$(git rev-parse HEAD) -X main.buildstamp=$(date +%Y%m%d.%H%M%S)" \' >> Dockerfile
+          echo '    -o goapp main.go' >> Dockerfile
+          echo 'FROM alpine:latest' >> Dockerfile
+          echo 'RUN apk update && apk add --no-cache \' >> Dockerfile
+          echo '    tzdata' >> Dockerfile
+          echo 'ENV TZ=Asia/Bangkok' >> Dockerfile
+          echo 'WORKDIR /app' >> Dockerfile
+          echo 'COPY ./configs ./configs' >> Dockerfile
+          echo 'COPY --from=builder /app/goapp ./goapp' >> Dockerfile
+          echo 'EXPOSE 1323' >> Dockerfile
+          echo 'CMD ["./goapp"]' >> Dockerfile
+      -
+        name: Login to DockerHub
+        uses: docker/login-action@v1 
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_ACCESS_TOKEN }}
+      -
+        name: Set up QEMU
+        uses: docker/setup-qemu-action@v1
+      -
+        name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v1
+      -
+        name: Build and push
+        id: docker_build
+        uses: docker/build-push-action@v2
+        with:
+          context: .
+          push: true
+          tags: ${{ format('jarbza/{0}:latest', env.DEPLOYMENT_NAME) }}
+  k8s-deployment:
+    name: Kubernetes deployment setup
+    needs: docker-build
+    runs-on: ubuntu-latest
+
+    steps:
+      -
+        name: Create deployment.yml
+        run: |-
+          echo "---" > deployment.yml
+          echo "apiVersion: apps/v1" >> deployment.yml
+          echo "kind: Deployment" >> deployment.yml
+          echo "metadata:" >> deployment.yml
+          echo "  name: $DEPLOYMENT_NAME" >> deployment.yml
+          echo "spec:" >> deployment.yml
+          echo "  replicas: 1" >> deployment.yml
+          echo "  selector:" >> deployment.yml
+          echo "    matchLabels:" >> deployment.yml
+          echo "      name: $DEPLOYMENT_NAME" >> deployment.yml
+          echo "  template:" >> deployment.yml
+          echo "    metadata:" >> deployment.yml
+          echo "      labels:" >> deployment.yml
+          echo "        name: $DEPLOYMENT_NAME" >> deployment.yml
+          echo "    spec:" >> deployment.yml
+          echo "      serviceAccountName: jarb-ksa-001" >> deployment.yml
+          echo "      volumes:" >> deployment.yml
+          echo "      - name: google-cloud-key" >> deployment.yml
+          echo "        secret:" >> deployment.yml
+          echo "          secretName: pubsub-key" >> deployment.yml
+
+          echo "      containers:" >> deployment.yml
+
+          echo "      - name: cloud-sql-proxy" >> deployment.yml
+          echo "        image: gcr.io/cloudsql-docker/gce-proxy:1.20.2" >> deployment.yml
+          echo "        command:" >> deployment.yml
+          echo "          - \"/cloud_sql_proxy\"" >> deployment.yml
+          echo "          - \"-instances=$PROJECT_ID:asia-southeast1:jarb-sql-001=tcp:3306\"" >> deployment.yml
+          echo "          - \"-credential_file=/var/secrets/google/key.json\"" >> deployment.yml
+          echo "        securityContext:" >> deployment.yml
+          echo "          runAsNonRoot: true" >> deployment.yml
+          echo "        volumeMounts:" >> deployment.yml
+          echo "        - name: google-cloud-key" >> deployment.yml
+          echo "          mountPath: /var/secrets/google" >> deployment.yml
+          echo "        env:" >> deployment.yml
+          echo "        - name: GOOGLE_APPLICATION_CREDENTIALS" >> deployment.yml
+          echo "          value: /var/secrets/google/key.json" >> deployment.yml
+
+          echo "      - name: application" >> deployment.yml
+          echo "        image: jarbza/$DEPLOYMENT_NAME:latest" >> deployment.yml
+          echo "        imagePullPolicy: Always" >> deployment.yml
+          echo "        ports:" >> deployment.yml
+          echo "          - containerPort: 1323" >> deployment.yml
+          echo "      imagePullSecrets:" >> deployment.yml
+          echo "      - name: registrypullsecret" >> deployment.yml
+      -
+        name: Check on Authorization
+        id: auth
+        uses: google-github-actions/auth@v0.4.0
+        with:
+          credentials_json: ${{ secrets.GKE_SA_KEY }}
+      - 
+        name: Setup gcloud CLI
+        uses: google-github-actions/setup-gcloud@master
+        with:
+          project_id: ${{ secrets.GKE_PROJECT }}
+      -
+        name: Get the GKE credentials
+        run: |-
+          gcloud container clusters get-credentials "$GKE_CLUSTER" --zone "$GKE_ZONE"
+      -
+        name: Deploy to cluster
+        run: |-
+          kubectl apply -f deployment.yml
+          kubectl rollout restart deployment $DEPLOYMENT_NAME
+  k8s-expose-service:
+    name: Kubernetes service setup
+    needs: k8s-deployment
+    runs-on: ubuntu-latest
+
+    steps:
+      -
+        name: Create service.yml
+        run: |-
+          echo "---" > service.yml
+          echo "apiVersion: v1" >> service.yml
+          echo "kind: Service" >> service.yml
+          echo "metadata:" >> service.yml
+          echo "  name: $DEPLOYMENT_NAME-service" >> service.yml
+          echo "  annotations:" >> service.yml
+          echo "    networking.gke.io/load-balancer-type: \"Internal\"" >> service.yml
+          echo "spec:" >> service.yml
+          echo "  type: LoadBalancer" >> service.yml
+          echo "  ports:" >> service.yml
+          echo "  - name: http" >> service.yml
+          echo "    port: 1323" >> service.yml
+          echo "    targetPort: 1323" >> service.yml
+          echo "  selector:" >> service.yml
+          echo "    name: $DEPLOYMENT_NAME" >> service.yml
+      -
+        name: Check on Authorization
+        id: auth
+        uses: google-github-actions/auth@v0.4.0
+        with:
+          credentials_json: ${{ secrets.GKE_SA_KEY }}
+      - 
+        name: Setup gcloud CLI
+        uses: google-github-actions/setup-gcloud@master
+        with:
+          project_id: ${{ secrets.GKE_PROJECT }}
+      -
+        name: Get the GKE credentials
+        run: |-
+          gcloud container clusters get-credentials "$GKE_CLUSTER" --zone "$GKE_ZONE"
+      -
+        name: Expose service
+        run: |-
+          kubectl apply -f service.yml
+  

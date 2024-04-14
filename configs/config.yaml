@@ -1,0 +1,24 @@
+app: 
+  name: "backend-api"
+  port: 1323
+
+log:
+  env: "prod"
+  level: "debug"
+  reportcaller: false
+
+mysql:
+  username: "root"   
+  password: "root"
+  database: "jabza"
+  host: "localhost"
+  port: "3306"
+  maxidle: 50
+  maxopen: 50
+  maxlifetime: 30m
+  timeout: 5s
+  readtimeout: 5s
+  writetimeout: 5s
+  parsetime: true
+  debug: true
+  migrate: false
