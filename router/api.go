@@ -17,10 +17,6 @@ import (
 
 func NewApiRouter(db *gorm.DB) {
 	app := fiber.New()
-	app.Get("/beers/all", func(c *fiber.Ctx) error {
-		return c.JSON(rp.GetBeers(db))
-	})
-
 	app.Use("/beers", mid.AuthRequired)
 
 	app.Get("/beers", func(c *fiber.Ctx) error {
@@ -89,7 +85,7 @@ func NewApiRouter(db *gorm.DB) {
 	})
 
 	app.Post("/register", func(c *fiber.Ctx) error {
-		user := new(u.User)
+		user := new(m.User)
 		if err := c.BodyParser(user); err != nil {
 			return c.SendStatus(fiber.StatusBadRequest)
 		}
@@ -103,7 +99,7 @@ func NewApiRouter(db *gorm.DB) {
 	})
 
 	app.Post("/login", func(c *fiber.Ctx) error {
-		user := new(u.User)
+		user := new(m.User)
 		if err := c.BodyParser(user); err != nil {
 			return c.SendStatus(fiber.StatusBadRequest)
 		}

@@ -1,9 +1,9 @@
 package repository
 
 import (
-	m "mariadb/model"
-
 	"gorm.io/gorm"
+
+	m "mariadb/model"
 )
 
 func FindUserOne(db *gorm.DB, email string, id int) (*m.User, error) {
