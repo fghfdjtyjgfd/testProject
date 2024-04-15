@@ -3,12 +3,17 @@ module mariadb
 go 1.22.1
 
 require (
+	github.com/bxcodec/faker/v3 v3.8.1
+	github.com/gofiber/fiber/v2 v2.52.4
+	github.com/golang-jwt/jwt/v4 v4.5.0
+	golang.org/x/crypto v0.22.0
+	gorm.io/driver/mysql v1.5.6
+	gorm.io/gorm v1.25.9
+)
+
+require (
 	github.com/andybalholm/brotli v1.0.5 // indirect
-	github.com/bxcodec/faker v2.0.1+incompatible // indirect
-	github.com/bxcodec/faker/v3 v3.8.1 // indirect
 	github.com/go-sql-driver/mysql v1.7.0 // indirect
-	github.com/gofiber/fiber/v2 v2.52.4 // indirect
-	github.com/golang-jwt/jwt/v4 v4.5.0 // indirect
 	github.com/google/uuid v1.5.0 // indirect
 	github.com/jinzhu/inflection v1.0.0 // indirect
 	github.com/jinzhu/now v1.1.5 // indirect
@@ -20,8 +25,5 @@ require (
 	github.com/valyala/bytebufferpool v1.0.0 // indirect
 	github.com/valyala/fasthttp v1.51.0 // indirect
 	github.com/valyala/tcplisten v1.0.0 // indirect
-	golang.org/x/crypto v0.22.0 // indirect
 	golang.org/x/sys v0.19.0 // indirect
-	gorm.io/driver/mysql v1.5.6 // indirect
-	gorm.io/gorm v1.25.9 // indirect
 )

@@ -1,6 +1,8 @@
 package User
 
 import (
+	"mariadb/model"
+	repo "mariadb/repository"
 	"os"
 	"time"
 
@@ -9,13 +11,7 @@ import (
 	"gorm.io/gorm"
 )
 
-type User struct {
-	ID       int
-	Email    string `gorm:"unique"`
-	Password string
-}
-
-func CreateUser(db *gorm.DB, user *User) error {
+func CreateUser(db *gorm.DB, user *model.User) error {
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(user.Password), bcrypt.DefaultCost)
 	if err != nil {
 		return err
@@ -28,13 +24,13 @@ func CreateUser(db *gorm.DB, user *User) error {
 	return nil
 }
 
-func LoginUser(db *gorm.DB, user *User) (string, error) {
-	selectedUser := new(User)
-	result := db.Where("email = ?", user.Email).First(selectedUser)
-	if result.Error != nil {
-		return "", result.Error
+func LoginUser(db *gorm.DB, user *model.User) (string, error) {
+	selectedUser, err := repo.FindUserOne(db, user.Email, user.ID)
+	if err != nil {
+		return "", err
 	}
-	err := bcrypt.CompareHashAndPassword([]byte(selectedUser.Password), []byte(user.Password))
+
+	err = bcrypt.CompareHashAndPassword([]byte(selectedUser.Password), []byte(user.Password))
 	if err != nil {
 		return "", err
 	}
@@ -53,4 +49,3 @@ func LoginUser(db *gorm.DB, user *User) (string, error) {
 	return t, nil
 
 }
-
