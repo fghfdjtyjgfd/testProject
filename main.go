@@ -4,16 +4,19 @@ import (
 	
 
 	conn "mariadb/connection"
+	"mariadb/model"
 	m "mariadb/model"
-	"mariadb/router"
+	router "mariadb/router"
 )
+
 func main() {
 	db, err := conn.NewDB()
 	if err != nil {
 		panic("failed to connect database")
 	}
 
-	db.AutoMigrate(&m.Beer{})
-	
+	db.AutoMigrate(&m.Beer{}, &model.User{})
+
+
 	router.NewApiRouter(db)
 }

@@ -4,12 +4,15 @@ import (
 	"fmt"
 	"math"
 	"strconv"
-
-	m "mariadb/model"
-	rp "mariadb/repository"
+	"time"
 
 	"github.com/gofiber/fiber/v2"
 	"gorm.io/gorm"
+
+	u "mariadb/User"
+	mid "mariadb/middleWare"
+	m "mariadb/model"
+	rp "mariadb/repository"
 )
 
 func NewApiRouter(db *gorm.DB) {
@@ -17,6 +20,8 @@ func NewApiRouter(db *gorm.DB) {
 	app.Get("/beers/all", func(c *fiber.Ctx) error {
 		return c.JSON(rp.GetBeers(db))
 	})
+
+	app.Use("/beers", mid.AuthRequired)
 
 	app.Get("/beers", func(c *fiber.Ctx) error {
 		var beers []m.Beer
@@ -82,6 +87,39 @@ func NewApiRouter(db *gorm.DB) {
 		}
 		return c.JSON(fiber.Map{"message": "deleted beer successful"})
 	})
-	
+
+	app.Post("/register", func(c *fiber.Ctx) error {
+		user := new(u.User)
+		if err := c.BodyParser(user); err != nil {
+			return c.SendStatus(fiber.StatusBadRequest)
+		}
+
+		err := u.CreateUser(db, user)
+		if err != nil {
+			return c.SendStatus(fiber.StatusBadRequest)
+		}
+
+		return c.JSON(fiber.Map{"message": "registed user successful"})
+	})
+
+	app.Post("/login", func(c *fiber.Ctx) error {
+		user := new(u.User)
+		if err := c.BodyParser(user); err != nil {
+			return c.SendStatus(fiber.StatusBadRequest)
+		}
+		token, err := u.LoginUser(db, user)
+		if err != nil {
+			return c.SendStatus(fiber.StatusUnauthorized)
+		}
+		c.Cookie(&fiber.Cookie{
+			Name:     "jwt",
+			Value:    token,
+			Expires:  time.Now().Add(time.Hour * 72),
+			HTTPOnly: true,
+		})
+
+		return c.JSON(fiber.Map{"message": "login successful"})
+	})
+
 	app.Listen(":8000")
 }
