@@ -1,6 +1,8 @@
 package main
 
 import (
+	
+
 	conn "mariadb/connection"
 	"mariadb/model"
 	m "mariadb/model"
@@ -12,7 +14,9 @@ func main() {
 	if err != nil {
 		panic("failed to connect database")
 	}
+
 	db.AutoMigrate(&m.Beer{}, &model.User{})
+
 
 	router.NewApiRouter(db)
 }
