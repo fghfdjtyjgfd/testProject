@@ -1,17 +1,18 @@
 package User
 
 import (
-	"mariadb/model"
-	repo "mariadb/repository"
 	"os"
 	"time"
 
 	"github.com/golang-jwt/jwt/v4"
 	"golang.org/x/crypto/bcrypt"
 	"gorm.io/gorm"
+
+	m "mariadb/model"
+	repo "mariadb/repository"
 )
 
-func CreateUser(db *gorm.DB, user *model.User) error {
+func CreateUser(db *gorm.DB, user *m.User) error {
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(user.Password), bcrypt.DefaultCost)
 	if err != nil {
 		return err
@@ -24,7 +25,7 @@ func CreateUser(db *gorm.DB, user *model.User) error {
 	return nil
 }
 
-func LoginUser(db *gorm.DB, user *model.User) (string, error) {
+func LoginUser(db *gorm.DB, user *m.User) (string, error) {
 	selectedUser, err := repo.FindUserOne(db, user.Email, user.ID)
 	if err != nil {
 		return "", err
