@@ -9,7 +9,7 @@ import (
 
 // New new database connection
 func NewDB() (*gorm.DB, error) {
-	dns := "root:root@tcp(127.0.0.1:3306)/testdb"
+	dns := "root:secret@tcp(127.0.0.1:3306)/testdb"
 
 	db, err := gorm.Open(mysql.Open(dns), &gorm.Config{})
 	if err != nil {
